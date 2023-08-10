@@ -138,6 +138,11 @@ export default {
       if(!this.convertText){
         return
       }
+      voiceRepository.convertVoicet(this.convertText,"xiaoyun",function(address){
+        this.sound = new Howl({src:[address]})
+        this.sound.play();
+
+      })
       console.log(this.convertText);
     }
   }

@@ -5,11 +5,16 @@ module.exports = defineConfig({
   configureWebpack: {
     resolve: {
       fallback: {
-        "os": require.resolve("os-browserify/browser"),
-        "assert": require.resolve("assert/"),
-        "url": require.resolve("url/"),
-        "querystring": require.resolve("querystring-es3"),
+        path: require.resolve("path-browserify"),
       },
     },
   },
+  devServer: {
+    proxy: {
+      '/alibaba': {
+        target: 'http://nls-meta.cn-shanghai.aliyuncs.com',
+        changeOrigin: true
+      }
+    }
+  }
 })
