@@ -2,7 +2,7 @@
   <el-container class="my-container" style="height: 100%;">
     <!-- 上部区域 -->
     <el-main style="height: 100%;">
-      <textarea style="height:400px;width:95%"
+      <textarea style="height:350px;width:95%"
         v-model="convertText"
         type="textarea"
         placeholder="请输入内容"
@@ -18,11 +18,29 @@
       <el-container>
         <!-- 左侧区域 -->
         <el-main>
-          <el-row>
-            <span>语音类型：</span>
-            <el-button plain size="small" @click="selectVoicer">{{ voicer.name }} / {{ voicer.type }}</el-button>
-            <span style="margin-left:40px;">背景音乐：</span>
-            <el-button plain size="small" @click="selectBgMusic">{{ music.name }}</el-button>
+          <el-row v-on:mouseleave = "this.dropdownVisible=false;this.voiceDropdownVisible=false">
+              <el-dropdown>
+              <span>
+                语音类型：
+              </span>
+              <el-dropdown-menu slot="dropdown" v-show="dropdownVisible">
+                <el-dropdown-item v-for="option in voiceList" :key="option.name" @click="selectVoicer(option)">
+                  {{ option.name }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+            <el-button plain size="small" @click="this.dropdownVisible=true">{{ voicer.name }} / {{ voicer.type }}</el-button>
+
+            <el-dropdown>
+              <span style="margin-left:20px;">背景音乐：</span>
+              <el-dropdown-menu slot="dropdown" v-show="voiceDropdownVisible">
+                <el-dropdown-item v-for="item in backgroundList" :key="item.name" @click="selectBackground(item)">
+                  {{ item.name }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+            <el-button plain size="small" @click="this.voiceDropdownVisible=true">{{ music.name }}</el-button>
+         
           </el-row>
           <el-row>
             <el-col :span="8">
@@ -51,7 +69,7 @@
         </el-main>
         <!-- 右侧区域 -->
         <el-aside width="170px" class="right-buttons">
-          <div class="right-buttons-box">
+          <div class="right-buttons-conver">
             <el-button
               class="right-buttons-listen"
               :disabled="isDisabled"
@@ -69,6 +87,15 @@
             >
               开始转换
             </el-button>
+            <el-button
+              class="right-buttons-convert"
+              :loading="showLoading"
+              icon="el-icon-refresh"
+              type="primary"
+              @click="downLoadVoice"
+            >
+              下载
+            </el-button>
           </div>
         </el-aside>
       </el-container>
@@ -80,6 +107,7 @@
 import { Howl } from 'howler';
 import path from "path";
 import voiceRepository from '../utils/voiceRepository.js'
+import voiceConfig from '../utils/config.js'
 
 
 export default {
@@ -87,42 +115,47 @@ export default {
   mounted() {
 		this.$nextTick(function() {
 			//初始化token
-      this.convertText = "";
+      this.dropdownVisible = false;
+      this.voiceList = voiceConfig.voice_type;
+      this.voiceDropdownVisible = false;
+      this.backgroundList =  voiceConfig.background;
+      this.music = this.backgroundList[0];
       voiceRepository.getToken();
 		});
 	},
 	data() {
 		return {
-			voicer: { name: "小云", alias: "Xiaoyun", type: "标准女声", scene: "通用场景" },
-			music: { name: "选择背景音乐", url: null, path: null, isOnline: null, isUseBgm: false },
+			voicer: { name: "小云/标准女声", value: "Xiaoyun" },
+			music: { name: "选择背景音乐", url: null},
 			convertText: "",
 			volume: 50, //音量
 			speed: 50, //语速
 			volume_bg: 50, //背景音量
 			format: "mp3", //输出格式
-			saveFolder: path.join("/Users/apple/front/voice-data", "语音"), //保存目录
-			audioSaveFile: "", //临时生成的语音文件
-			outputAudioFile: "", //转换完毕生成的音频文件
+			outputFileUrl: "", //转换完毕生成的音频文件
 			showLoading: false, //转换按钮动画
 			sound: new Howl({ src: ["1.mp3"] }), // 试听播放器
-			isPlay: false //是否正在播放
+			isPlay: false, //是否正在播放
+      isBackgroundPlay:false,
+      voiceList:[],
+      dropdownVisible:false,
+      backgroundList:[],
+      voiceDropdownVisible:false
+
 		};
 	},
   methods: {
     rightClickHandle(event) {
       // 处理右键点击事件
     },
-    selectVoicer() {
+    selectVoicer(option) {
       // 选择语音类型操作
+      this.voicer = option;
+      this.dropdownVisible=false;
     },
-    selectBgMusic() {
-      // 选择背景音乐操作
-    },
-    voicerChange(selectedVoicer) {
-      this.voicer = selectedVoicer;
-    },
-    musicChange(selectedMusic) {
-      this.music = selectedMusic;
+    selectBackground(option){
+      this.music = option;
+      this.voiceDropdownVisible = false;
     },
     updateFolder() {
       // 更新保存目录操作
@@ -132,25 +165,56 @@ export default {
     },
     trialListen() {
       // 试听操作
+      if(this.isBackgroundPlay){
+        this.isBackgroundPlay = false;
+        this.sound.stop();
+        return 
+      }
+      this.isBackgroundPlay = true;
+      this.sound = new Howl({src:[this.music.url]})
+      this.sound.volume = this.volume/100
+      this.sound.play();
     },
     startConvert() {
       // 开始转换操作
       if(!this.convertText){
         return
       }
-      voiceRepository.convertVoicet(this.convertText,"xiaoyun",function(address){
-        this.sound = new Howl({src:[address]})
-        this.sound.play();
+      this.sound.stop();
+      var that = this;
+      voiceRepository.convertVoice(this.convertText,this.voicer.value,function(address){
+        that.sound = new Howl({src:[address]})
+        that.sound.play();
+        that.outputFileUrl = address;
 
       })
-      console.log(this.convertText);
+    },
+    downLoadVoice(){
+      if(!this.outputFileUrl){
+        return;
+      }
+      const downloadUrl = this.outputFileUrl // 下载文件的URL
+      const filename = 'myVoice.wma'; // 下载文件的文件名
+      fetch(downloadUrl)
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          window.URL.revokeObjectURL(url);
+        });
     }
   }
 };
 </script>
 
 <style lang="less" scoped>
-//scoped穿透修改第三方组件样式 参考：https://www.cnblogs.com/wenxuehai/p/11611960.html
 .my-container {
 	height: 100%;
 
@@ -187,31 +251,32 @@ export default {
 }
 
 // ========= 右侧按钮 =========
-.right-buttons {
-	.right-buttons-box {
-		width: 150px;
-		height: 110px;
+
+.right-buttons-box {
+		width: 140px;
+		height: 90px;
 		margin: 0px auto; //水平居中
 		margin-right: 0px; //按钮靠右
 		position: relative;
-		top: 50%;
+		top: 40%;
 		transform: translateY(-50%);
 		display: block;
-		// 试听一下
-		.right-buttons-listen {
-			width: 140px;
-			height: 45px;
-			margin: 0px auto;
-			font-size: 18px;
-		}
-		// 开始转换
-		.right-buttons-convert {
-			width: 140px;
-			height: 45px;
-			margin: 0px auto;
-			margin-top: 20px;
-			font-size: 18px;
-		}
-	}
 }
+		// 试听一下
+.right-buttons-listen {
+  width: 140px;
+  height: 20px;
+  margin: 0px auto;
+  font-size: 18px;
+}
+		// 开始转换
+.right-buttons-convert {
+  width: 140px;
+  height: 20px;
+  margin: 0px auto;
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+
 </style>

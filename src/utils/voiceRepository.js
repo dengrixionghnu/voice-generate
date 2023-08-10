@@ -1,14 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
-import CryptoJS from 'crypto-js';
+import { HmacSHA1, enc } from 'crypto-js';
+import voiceConfig from './config.js'
 
 
 
 
 var config ={
-     AccessKeyId : 'LTAI5t8mtvtrPbRKzREnKAtG',
-     AccessKeySecret :'mA34IKXMKFx45Otji6D3wjnjRbyHyB',
-	   appkey : 'rwuFY88M4HZUkfBk',
+     AccessKeyId : 'xxxxxx',
+     AccessKeySecret :'xxxxxx',
+	   appkey : 'xxxxx',
      tokenUrl:'http://nls-meta.cn-shanghai.aliyuncs.com',
      voiceUrl:"wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1",
      apiVersion:'2019-02-28',
@@ -18,19 +19,10 @@ var config ={
 
 
 // 获取时间戳
-function timestamp() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0'); // 月份从0开始，需加1
-  const day = `${date.getDate()}`.padStart(2, '0');
-  const hours = `${date.getHours()}`.padStart(2, '0');
-  const minutes = `${date.getMinutes()}`.padStart(2, '0');
-  const seconds = `${date.getSeconds()}`.padStart(2, '0');
-
-  // 构建日期字符串
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
-}
-
+// 获取时间戳
+function timestamp() {  const currentDate = new Date(); 
+   return currentDate.toISOString().split('.')[0] + 'Z';
+  }
 // url编码
 function encode(str) {
   const result = encodeURIComponent(str);
@@ -59,12 +51,11 @@ var getToken = function getToken(){
 		const stringToSign = `GET&${encode("/")}&${encode(query_string)}`;
 
 		//计算签名
-		const key = config.AccessKeySecret + "&";
-		const signature = CryptoJS.HmacSHA1(stringToSign, key).toString();
-		const Signature = encode(signature);
-
-		//调用服务
-		const full_url = `/alibaba/?Signature=${Signature}&${query_string}`;
+    const key = config.AccessKeySecret + "&";   
+    const signature = HmacSHA1(stringToSign, key).toString(enc.Base64);  
+    const Signature = encode(signature);
+    //调用服务
+    const full_url = `/getToken/?Signature=${Signature}&${query_string}`;
 
 
     const corsConfig = {
@@ -75,7 +66,7 @@ var getToken = function getToken(){
 
     axios.get(full_url, corsConfig)
         .then(response => {
-          tokenObj = response.data.Token;
+          var tokenObj = response.data.Token;
           config.token = tokenObj.Id;
           config.expireTime = tokenObj.ExpireTime
         })
@@ -83,9 +74,27 @@ var getToken = function getToken(){
           console.error(error);
         });
 }
+
+
+function saveFile(voiceAddress,callback) {
+    axios({
+      method: 'get',
+      url: voiceAddress,
+      responseType: 'blob',
+    }).then(response => {
+      var filename = timestamp()+".wma";
+      const filePath = voiceConfig.voice_path+filename; // 下载文件的文件名
+      const blob = new Blob([response.data]);
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filePath;
+      link.click();
+      callback(filename);
+    });
+}
      
 var convertVoice = async function convertVoice(line,voiceType,callback){
-    var url = "/alibaba/rest/v1/tts/async"
+    var url = "/convertVoice"
     console.log(url);
     // 请求参数，以JSON格式字符串填入HTTPS POST请求的Body中。
     var context = {
@@ -108,6 +117,13 @@ var convertVoice = async function convertVoice(line,voiceType,callback){
         "tts_request" : tts_request,
     };
 
+    var tts_body = {
+      "context" : context,
+      "header" : header,
+      "payload" : payload
+  };
+
+
     var bodyContent = JSON.stringify(tts_body);
     const corsConfig = {
       headers: {
@@ -122,13 +138,12 @@ var convertVoice = async function convertVoice(line,voiceType,callback){
       var request_id = respData.request_id;
       var fullUrl = url + "?appkey=" + config.appkey + "&task_id=" + task_id + "&token=" 
       + config.token + "&request_id=" + request_id;
+      waitLoop4Complete(fullUrl,callback);
 
     })
     .catch (error=>{
 
     })
-
-
 
   
 }
@@ -148,17 +163,18 @@ function waitLoop4Complete(url,callback) {
         var error_code = result.error_code
         var error_message = result.error_message
         if(error_code==20000000 && error_message=="SUCCESS"){
-          var address = result.audio_address;
+          var address = result.data.audio_address;
           callback(address);
+          clearInterval(timer);
         }
         if(error_code!=20000000){
-          clearInterval();
+          clearInterval(timer);
         }
 
       }
     ).catch(
       error=>{
-        clearInterval();
+        clearInterval(timer);
       }
     )
      

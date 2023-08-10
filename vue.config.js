@@ -5,16 +5,22 @@ module.exports = defineConfig({
   configureWebpack: {
     resolve: {
       fallback: {
-        path: require.resolve("path-browserify"),
+        path: require.resolve("path-browserify")
       },
     },
   },
   devServer: {
-    proxy: {
-      '/alibaba': {
-        target: 'http://nls-meta.cn-shanghai.aliyuncs.com',
-        changeOrigin: true
-      }
-    }
+    proxy: {     
+       '/getToken': {   
+          target: 'http://nls-meta.cn-shanghai.aliyuncs.com',  
+          changeOrigin: true  
+          },     
+         '/convertVoice': {     
+            target: 'https://nls-gateway.cn-shanghai.aliyuncs.com',   
+            changeOrigin: true,      
+            secure: true,
+            pathRewrite: {'^/convertVoice': '/rest/v1/tts/async'}     
+            }   
+          }
   }
 })
