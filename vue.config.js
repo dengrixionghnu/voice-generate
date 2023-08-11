@@ -1,26 +1,25 @@
 const { defineConfig } = require('@vue/cli-service')
-module.exports = defineConfig({
+module.exports = {
   transpileDependencies: true,
   lintOnSave: false,
-  configureWebpack: {
-    resolve: {
-      fallback: {
-        path: require.resolve("path-browserify")
-      },
+  configureWebpack: config => {
+       config.resolve.fallback = {
+          path: require.resolve("path-browserify"),
+          crypto: require.resolve("crypto-browserify"),
+          stream: require.resolve("stream-browserify")
+       };
+  
+      config.module.rules.push({
+        test: /\.worker.js$/,
+        use: {
+          loader: 'worker-loader',
+          options: { inline: true, name: 'workerName.[hash].js' }
+        }
+        }),
+      config.devtool='source-map'
     },
-  },
-  devServer: {
-    proxy: {     
-       '/getToken': {   
-          target: 'http://nls-meta.cn-shanghai.aliyuncs.com',  
-          changeOrigin: true  
-          },     
-         '/convertVoice': {     
-            target: 'https://nls-gateway.cn-shanghai.aliyuncs.com',   
-            changeOrigin: true,      
-            secure: true,
-            pathRewrite: {'^/convertVoice': '/rest/v1/tts/async'}     
-            }   
-          }
-  }
-})
+parallel: false,
+chainWebpack: config => {
+      config.output.globalObject('this')
+    }
+}

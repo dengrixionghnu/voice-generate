@@ -2,28 +2,24 @@ var config={
     voice_path:"/Users/apple/front/voice-data/",
     voice_type:[
         {
-        name:"小云/标准女声",
-        value:"xiaoyun"
+        name:"小燕/女生",
+        value:"xiaoyan"
         },
         {
-        name:"小刚/标准男声",
-        value:"xiaogang"
+        name:"许久/男生",
+        value:"aisjiuxu"
         },
         {
-        name:"若兮/温柔女声",
-        value:"ruoxi"
+        name:"小萍/女生",
+        value:"aisxping"
         },
         {
-        name:"思琪/温柔女声",
-        value:"siqi"
+        name:"小婧/女生",
+        value:"aisjinger"
         },
         {
-        name:"思佳/标准女声",
-        value:"sijia"
-        },
-        {
-        name:"思诚/标准男声",
-        value:"sicheng"
+        name:"小宝/女生",
+        value:"aisbabyxu"
         }
     ],
     background:[

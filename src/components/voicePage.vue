@@ -106,8 +106,9 @@
 <script>
 import { Howl } from 'howler';
 import path from "path";
-import voiceRepository from '../utils/voiceRepository.js'
 import voiceConfig from '../utils/config.js'
+import TTSRecorder from '../utils/xunFeiRepository.js'
+
 
 
 export default {
@@ -117,10 +118,10 @@ export default {
 			//初始化token
       this.dropdownVisible = false;
       this.voiceList = voiceConfig.voice_type;
+      this.voicer = this.voiceList[0]
       this.voiceDropdownVisible = false;
       this.backgroundList =  voiceConfig.background;
       this.music = this.backgroundList[0];
-      voiceRepository.getToken();
 		});
 	},
 	data() {
@@ -140,7 +141,8 @@ export default {
       voiceList:[],
       dropdownVisible:false,
       backgroundList:[],
-      voiceDropdownVisible:false
+      voiceDropdownVisible:false,
+      ttsRecorder:{}
 
 		};
 	},
@@ -180,36 +182,21 @@ export default {
       if(!this.convertText){
         return
       }
-      this.sound.stop();
-      var that = this;
-      voiceRepository.convertVoice(this.convertText,this.voicer.value,function(address){
-        that.sound = new Howl({src:[address]})
-        that.sound.play();
-        that.outputFileUrl = address;
-
+      this.ttsRecorder = new TTSRecorder();
+      this.ttsRecorder.setParams({ 
+          voiceName: this.voicer.value, 
+          tte: 'UTF8',
+          text: this.convertText
       })
+      this.ttsRecorder.start();
+     
     },
     downLoadVoice(){
-      if(!this.outputFileUrl){
-        return;
+      if(this.ttsRecorder){
+        this.ttsRecorder.download();
       }
-      const downloadUrl = this.outputFileUrl // 下载文件的URL
-      const filename = 'myVoice.wma'; // 下载文件的文件名
-      fetch(downloadUrl)
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-
-          window.URL.revokeObjectURL(url);
-        });
     }
+
   }
 };
 </script>
